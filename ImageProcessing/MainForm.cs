@@ -109,6 +109,27 @@ namespace ImageProcessing {
                 vals[i] = new byte[width];
             }
         }
+        public unsafe void LoadFromBitmap(System.Drawing.Bitmap bmp) {
+            System.Drawing.Imaging.BitmapData bmd = bmp.LockBits(new System.Drawing.Rectangle(0, 0, bmp.Width - 1, bmp.Height - 1), System.Drawing.Imaging.ImageLockMode.ReadOnly, bmp.PixelFormat);
+            for (int y = 0; y < bmd.Height; y++) {
+                fixed (byte* rowPtr = &vals[y][0]) {
+                    System.Runtime.InteropServices.Marshal.Copy(new IntPtr((int)bmd.Scan0 + bmd.Stride * y), vals[y], 0, bmp.Width * sizeof(byte));
+
+                }
+            }
+            bmp.UnlockBits(bmd);
+
+        }
+
+        public unsafe void SaveToBitmap(System.Drawing.Bitmap bmp) {
+            System.Drawing.Imaging.BitmapData bmd = bmp.LockBits(new System.Drawing.Rectangle(0, 0, bmp.Width - 1, bmp.Height - 1), System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
+            for (int y = 0; y < bmd.Height; y++) {
+                fixed (byte* rowPtr = &vals[y][0]) {
+                    System.Runtime.InteropServices.Marshal.Copy(vals[y], 0, new IntPtr((int)bmd.Scan0 + bmd.Stride * y), bmp.Width);
+                }
+            }
+            bmp.UnlockBits(bmd);
+        }
     }
 
     public class ColorImage {
@@ -139,28 +160,27 @@ namespace ImageProcessing {
             }
         }
 
-        public System.Drawing.Bitmap ToBitmap() {
-            var retval = new System.Drawing.Bitmap(Height, Width);
+        //public System.Drawing.Bitmap ToBitmap() {
+        //    var retval = new System.Drawing.Bitmap(Height, Width);
 
-            for (int i = 0; i < Height; i++) {
-                for (int j = 0; j < Width; j++) {
-                    retval.SetPixel(i, j, System.Drawing.Color.FromArgb(this[i, j][0], this[i,j][1], this[i,j][1]));
-                }
-            }
-            return retval;
-        }
-        public static ColorImage FromBitmap(System.Drawing.Bitmap bmp) {
-            var retval = new ColorImage(bmp.Height, bmp.Width);
+        //    for (int i = 0; i < Height; i++) {
+        //        for (int j = 0; j < Width; j++) {
+        //            retval.SetPixel(i, j, System.Drawing.Color.FromArgb(this[i, j][0], this[i,j][1], this[i,j][1]));
+        //        }
+        //    }
+        //    return retval;
+        //}
+        //public static ColorImage FromBitmap(System.Drawing.Bitmap bmp) {
+        //    var retval = new ColorImage(bmp.Height, bmp.Width);
+        //    for (int i = 0; i < bmp.Height; i++) {
+        //        for (int j = 0; j < bmp.Width; j++) {
+        //            retval.Red[i, j] = bmp.GetPixel(j, i).R;
+        //            retval.Green[i, j] = bmp.GetPixel(j, i).G;
+        //            retval.Blue[i, j] = bmp.GetPixel(j, i).B;
+        //        }
+        //    }
 
-            for (int i = 0; i < bmp.Height; i++) {
-                for (int j = 0; j < bmp.Width; j++) {
-                    retval.Red[i, j] = bmp.GetPixel(i, j).R;
-                    retval.Green[i, j] = bmp.GetPixel(i, j).G;
-                    retval.Blue[i, j] = bmp.GetPixel(i, j).B;
-                }
-            }
-
-            return retval;
-        }
+        //    return retval;
+        //}
     }
 }
