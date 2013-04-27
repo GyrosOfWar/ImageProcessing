@@ -9,86 +9,78 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ImageProcessing {
-    public partial class MainForm : Form {
+    public partial class MainForm: Form {
         private ColorImage img;
-        private Stopwatch stpw = new Stopwatch();
         public MainForm() {
             InitializeComponent();
             var bmp = new System.Drawing.Bitmap(@"res\Desert.jpg");
-            img = ColorImage.FromBitmap(bmp);
+            pictureBox1.Image = bmp;
+            img = new ColorImage(bmp.Height, bmp.Width);
+            img.LoadFromBitmap(bmp);
         }
 
         public ColorImage MedianFilter(ColorImage img, int windowSize) {
-            for (int i = 1; i < img.Width - 1; i++) {
-                for (int j = 1; j < img.Height - 1; j++) {
-                    var neighborhood_r = new byte[windowSize * windowSize];
-                    var neighborhood_g = new byte[windowSize * windowSize];
-                    var neighborhood_b = new byte[windowSize * windowSize];
-                    for (int k = -windowSize / 2; k < windowSize / 2; k++) {
-                        for (int l = -windowSize / 2; l < windowSize / 2; l++) {
-                            neighborhood_r[k * windowSize + l] = img[i + windowSize, j + windowSize][0];
-                            neighborhood_g[k * windowSize + l] = img[i + windowSize, j + windowSize][1];
-                            neighborhood_b[k * windowSize + l] = img[i + windowSize, j + windowSize][2];
-                        }
-                    }
+            ColorImage ret = new ColorImage(img.Height, img.Width);
+            for(int i = 1; i < img.Height - 1; i++) {
+                for(int j = 1; j < img.Width - 1; j++) {
+
+                    var neighborhood_r = ColorImage.GetNeighborhood(img, i, j, windowSize, 0);
+                    var neighborhood_g = ColorImage.GetNeighborhood(img, i, j, windowSize, 1);
+                    var neighborhood_b = ColorImage.GetNeighborhood(img, i, j, windowSize, 2);
                     Array.Sort(neighborhood_r);
                     Array.Sort(neighborhood_g);
                     Array.Sort(neighborhood_b);
-                    img.Red[i, j] = neighborhood_r[neighborhood_r.Length / 2];
-                    img.Green[i, j] = neighborhood_g[neighborhood_g.Length / 2];
-                    img.Blue[i, j] = neighborhood_b[neighborhood_b.Length / 2];
+
+                    ret.Red[i, j] = neighborhood_r[neighborhood_r.Length / 2];
+                    ret.Green[i, j] = neighborhood_g[neighborhood_g.Length / 2];
+                    ret.Blue[i, j] = neighborhood_b[neighborhood_b.Length / 2];
+                }
+            }
+            return ret;
+        }
+
+        public ColorImage MedianFilterFast(ColorImage img, int windowSize) {
+            ColorImage ret = new ColorImage(img.Height, img.Width);
+            int[] hist = new int[256];
+            // TODO implement Huang's fast median filtering algorithm
+            return ret;
+        }
+        // TODO Write Kernel class to get stuff like scaling (rational coefficient to be multiplied into the kernel
+        // and kernel offset more easily
+        public ColorImage Convolution(ColorImage img, byte[][] kernel) {
+            ColorImage ret = new ColorImage(img.Height, img.Width);
+            if(kernel.Length != kernel[0].Length)
+                throw new ArgumentException("Kernel must be quadratic in shape (n x n)");
+            int low = -kernel.Length / 2;
+            int high = kernel.Length / 2;
+            for(int i = 0; i < img.Height; i++) {
+                for(int j = 0; j < img.Width; j++) {
+                    byte newR = 0, newG = 0, newB = 0;
+                    for(int i_k = low; i_k <= high; i_k++) {
+                        for(int j_k = low; j_k <= high; j_k++) {
+                            newR += (byte) (img.Red[i + i_k, j + j_k] * kernel[i_k + high][j_k + high]);
+                            newG += (byte) (img.Green[i + i_k, j + j_k] * kernel[i_k + high][j_k + high]);
+                            newB += (byte) (img.Blue[i + i_k, j + j_k] * kernel[i_k + high][j_k + high]);
+                        }
+                    }
+                    ret.Red[i, j] = newR;
+                    ret.Green[i, j] = newG;
+                    ret.Blue[i, j] = newB;
                 }
             }
 
-            return img;
+            return ret;
         }
 
         private void MainForm_Load(object sender, EventArgs e) {
-            pictureBox1.Image = img.ToBitmap();
-            var img2 = MedianFilter(img, 3);
-            pictureBox2.Image = img2.ToBitmap();
-        }
-    }
+            var unfiltered_bmp = new System.Drawing.Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            img.SaveToBitmap(unfiltered_bmp);
+            pictureBox1.Image = unfiltered_bmp;
 
-    public class Color : IComparable<Color> {
-        public byte R { get; set; }
-        public byte G { get; set; }
-        public byte B { get; set; }
-
-        public Color(int r, int g, int b) {
-            this.R = (byte)r;
-            this.G = (byte)g;
-            this.B = (byte)b;
-        }
-        public int CompareTo(Color other) {
-            int thisSum = R + G + B;
-            int otherSum = other.R + other.G + other.B;
-            if (thisSum > otherSum)
-                return 1;
-            if (thisSum == otherSum)
-                return 0;
-            if (thisSum < otherSum)
-                return -1;
-            return 0;
-        }
-        public override bool Equals(object obj) {
-            Color other = (Color)obj;
-            return other.R == this.R && other.G == this.G && other.B == this.B;
-        }
-        public override int GetHashCode() {
-            return R.GetHashCode() ^ G.GetHashCode() ^ B.GetHashCode();
-        }
-
-        public override string ToString() {
-            return "{R = " + R + ", G = " + G + ", B = " + B + "}";
-        }
-
-        public System.Drawing.Color ToArgb() {
-            return System.Drawing.Color.FromArgb(R, G, B);
-        }
-
-        public static Color FromArgb(System.Drawing.Color c) {
-            return new Color(c.R, c.G, c.B);
+            var filtered_bmp = new System.Drawing.Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            var img_filtered = MedianFilter(img, 3);
+            img_filtered.SaveToBitmap(filtered_bmp);
+            pictureBox2.Image = filtered_bmp;
         }
     }
 
@@ -105,30 +97,9 @@ namespace ImageProcessing {
             this.Height = height;
             this.Width = width;
             this.vals = new byte[height][];
-            for (int i = 0; i < height; i++) {
+            for(int i = 0; i < height; i++) {
                 vals[i] = new byte[width];
             }
-        }
-        public unsafe void LoadFromBitmap(System.Drawing.Bitmap bmp) {
-            System.Drawing.Imaging.BitmapData bmd = bmp.LockBits(new System.Drawing.Rectangle(0, 0, bmp.Width - 1, bmp.Height - 1), System.Drawing.Imaging.ImageLockMode.ReadOnly, bmp.PixelFormat);
-            for (int y = 0; y < bmd.Height; y++) {
-                fixed (byte* rowPtr = &vals[y][0]) {
-                    System.Runtime.InteropServices.Marshal.Copy(new IntPtr((int)bmd.Scan0 + bmd.Stride * y), vals[y], 0, bmp.Width * sizeof(byte));
-
-                }
-            }
-            bmp.UnlockBits(bmd);
-
-        }
-
-        public unsafe void SaveToBitmap(System.Drawing.Bitmap bmp) {
-            System.Drawing.Imaging.BitmapData bmd = bmp.LockBits(new System.Drawing.Rectangle(0, 0, bmp.Width - 1, bmp.Height - 1), System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
-            for (int y = 0; y < bmd.Height; y++) {
-                fixed (byte* rowPtr = &vals[y][0]) {
-                    System.Runtime.InteropServices.Marshal.Copy(vals[y], 0, new IntPtr((int)bmd.Scan0 + bmd.Stride * y), bmp.Width);
-                }
-            }
-            bmp.UnlockBits(bmd);
         }
     }
 
@@ -138,9 +109,9 @@ namespace ImageProcessing {
         public Image Blue { get; private set; }
         public int Height { get; private set; }
         public int Width { get; private set; }
+        public const System.Drawing.Imaging.PixelFormat PixelFormat = System.Drawing.Imaging.PixelFormat.Format24bppRgb;
 
-        public ColorImage(Image r, Image g, Image b)
-        {
+        public ColorImage(Image r, Image g, Image b) {
             this.Red = r;
             this.Green = g;
             this.Blue = b;
@@ -152,35 +123,89 @@ namespace ImageProcessing {
             this.Red = new Image(h, w);
             this.Green = new Image(h, w);
             this.Blue = new Image(h, w);
+            this.Height = h;
+            this.Width = w;
         }
+        #region saveMethods
+        // implemented only for Format24bppRgb !!!
+        public void LoadFromBitmap(System.Drawing.Bitmap bmp) {
+            switch(bmp.PixelFormat) {
+                case System.Drawing.Imaging.PixelFormat.Format24bppRgb:
+                    LoadFrom24bppBitmap(bmp);
+                    break;
 
-        public byte[] this[int h, int w] {
-            get {
-                return new byte[] { Red[h, w], Green[h, w], Blue[h, w] };
+                case System.Drawing.Imaging.PixelFormat.Format32bppRgb:
+                    break;
             }
         }
 
-        //public System.Drawing.Bitmap ToBitmap() {
-        //    var retval = new System.Drawing.Bitmap(Height, Width);
+        // implemented only for Format24bppRgb !!!
+        public void SaveToBitmap(System.Drawing.Bitmap bitmap) {
+            switch(bitmap.PixelFormat) {
+                case System.Drawing.Imaging.PixelFormat.Format24bppRgb:
+                    SaveTo24bppBitmap(bitmap);
+                    break;
 
-        //    for (int i = 0; i < Height; i++) {
-        //        for (int j = 0; j < Width; j++) {
-        //            retval.SetPixel(i, j, System.Drawing.Color.FromArgb(this[i, j][0], this[i,j][1], this[i,j][1]));
-        //        }
-        //    }
-        //    return retval;
-        //}
-        //public static ColorImage FromBitmap(System.Drawing.Bitmap bmp) {
-        //    var retval = new ColorImage(bmp.Height, bmp.Width);
-        //    for (int i = 0; i < bmp.Height; i++) {
-        //        for (int j = 0; j < bmp.Width; j++) {
-        //            retval.Red[i, j] = bmp.GetPixel(j, i).R;
-        //            retval.Green[i, j] = bmp.GetPixel(j, i).G;
-        //            retval.Blue[i, j] = bmp.GetPixel(j, i).B;
-        //        }
-        //    }
+            }
+        }
 
-        //    return retval;
-        //}
+        public void LoadFrom24bppBitmap(System.Drawing.Bitmap bitmap) {
+            System.Drawing.Imaging.BitmapData bmd = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, bitmap.Width - 1, bitmap.Height - 1), System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
+            int offset = 0;
+            for(int y = 0; y < bmd.Height; y++) {
+                for(int x = 0; x < bmd.Width; x++) {
+                    int pixel = System.Runtime.InteropServices.Marshal.ReadInt32(bmd.Scan0, offset + x * 3);
+                    byte[] value = BitConverter.GetBytes(pixel);
+                    Red[y, x] = value[0];
+                    Green[y, x] = value[1];
+                    Blue[y, x] = value[2];
+                }
+                offset += bmd.Stride;
+            }
+            bitmap.UnlockBits(bmd);
+        }
+
+        public void SaveTo24bppBitmap(System.Drawing.Bitmap bitmap) {
+            System.Drawing.Imaging.BitmapData bmd = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, bitmap.Width - 1, bitmap.Height - 1), System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
+            int offset = 0;
+            byte[] value = new byte[4];
+            for(int y = 0; y < bmd.Height; y++) {
+                for(int x = 0; x < bmd.Width; x++) {
+                    value[0] = Red[y, x];
+                    value[1] = Green[y, x];
+                    value[2] = Blue[y, x];
+                    int pixel = BitConverter.ToInt32(value, 0);
+                    System.Runtime.InteropServices.Marshal.WriteInt32(bmd.Scan0, offset + x * 3, BitConverter.ToInt32(value, 0));
+                }
+                offset += bmd.Stride;
+            }
+            bitmap.UnlockBits(bmd);
+        }
+        #endregion
+
+        public static byte[] GetNeighborhood(ColorImage c, int x, int y, int size, int channel) {
+            byte[] ret = new byte[size * size];
+            int count = 0;
+            int low = -size / 2;
+            int high = size / 2;
+            for(int i = low; i <= high; i++) {
+                for(int j = low; j <= high; j++) {
+                    switch(channel) {
+                        case 0:
+                            ret[count++] = c.Red[x + i, y + j];
+                            break;
+                        case 1:
+                            ret[count++] = c.Green[x + i, y + j];
+                            break;
+                        case 2:
+                            ret[count++] = c.Blue[x + i, y + j];
+                            break;
+                        default:
+                            throw new ArgumentException("Illegal channel");
+                    }
+                }
+            }
+            return ret;
+        }
     }
 }
