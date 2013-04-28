@@ -126,6 +126,8 @@ namespace ImageProcessing {
             this.Height = h;
             this.Width = w;
         }
+        // The next three methods were
+        // taken from http://www.sergejusz.com/engineering_tips/median_filter.htm
         #region saveMethods
         // implemented only for Format24bppRgb !!!
         public void LoadFromBitmap(System.Drawing.Bitmap bmp) {
