@@ -10,11 +10,13 @@ using System.Windows.Forms;
 
 namespace ImageProcessing {
     public partial class MainForm: Form {
+        public enum FilterName { Median = 0, Average, Gauss, Custom };
         private ColorImage img;
         private Stopwatch stpw = new Stopwatch();
         private System.Drawing.Bitmap bmp;
         private int height, width;
-        private int selectedFilter;
+        private FilterName selectedFilter;
+        private readonly Filter average, gauss;
         public MainForm() {
             InitializeComponent();
             height = pictureBox1.Height;
@@ -22,7 +24,18 @@ namespace ImageProcessing {
             img = new ColorImage(height, width);
             bmp = new System.Drawing.Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             comboBox1.SelectedIndex = 0;
-            selectedFilter = comboBox1.SelectedIndex;
+            selectedFilter = (FilterName) comboBox1.SelectedIndex;
+            int[][] kernel = new int[3][];
+            kernel[0] = new int[] { 1, 1, 1 };
+            kernel[1] = new int[] { 1, 1, 1 };
+            kernel[2] = new int[] { 1, 1, 1 };
+            average = new Filter(kernel, 1.0 / 9.0, 0);
+
+            int[][] kernel2 = new int[3][];
+            kernel2[0] = new int[] { 1, 2, 1 };
+            kernel2[1] = new int[] { 2, 4, 2 };
+            kernel2[2] = new int[] { 1, 2, 1 };
+            gauss = new Filter(kernel2, 1.0 / 16.0, 0);
         }
 
         public ColorImage MedianFilter(ColorImage img, int windowSize) {
@@ -57,13 +70,13 @@ namespace ImageProcessing {
                 throw new ArgumentException("Kernel must be quadratic in shape (n x n)");
             int low = -kernel.Length / 2;
             int high = kernel.Length / 2;
-            for(int i = high; i < img.Height-high; i++) {
-                for(int j = high; j < img.Width-high; j++) {
+            for(int i = high; i < img.Height - high; i++) {
+                for(int j = high; j < img.Width - high; j++) {
                     int newR = 0, newG = 0, newB = 0;
                     for(int i_k = low; i_k <= high; i_k++) {
                         for(int j_k = low; j_k <= high; j_k++) {
                             // TODO Edge problem
-                            int r_i=0, g_i=0, b_i = 0;
+                            int r_i = 0, g_i = 0, b_i = 0;
                             r_i = img.Red[i + i_k, j + j_k];
                             g_i = img.Green[i + i_k, j + j_k];
                             b_i = img.Blue[i + i_k, j + j_k];
@@ -87,40 +100,45 @@ namespace ImageProcessing {
             return (byte) Math.Min(Math.Max(val, low), high);
         }
 
-        private void MainForm_Load(object sender, EventArgs e) {
-            //var unfiltered_bmp = new System.Drawing.Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-            //img.SaveToBitmap(unfiltered_bmp);
-
-            //var filtered_bmp = new System.Drawing.Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-            //int[][] kernel = new int[3][];
-            //kernel[0] = new int[] { 1, 1, 1 };
-            //kernel[1] = new int[] { 1, 1, 1 };
-            //kernel[2] = new int[] { 1, 1, 1 };
-            //var f = new Filter(kernel, 1.0 / 9.0, 0);
-            //var img_filtered = Convolution(img, f);
-            //img_filtered.SaveToBitmap(filtered_bmp);
-        }
-
         private void openButton_Click(object sender, EventArgs e) {
             if(openFileDialog1.ShowDialog() == DialogResult.OK) {
                 bmp = new System.Drawing.Bitmap(openFileDialog1.FileName);
                 pictureBox1.Image = bmp;
+                img = new ColorImage(bmp.Height, bmp.Width);
                 img.LoadFromBitmap(bmp);
             }
         }
 
         private void applyFilterButton_Click(object sender, EventArgs e) {
-            var filtered = new System.Drawing.Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            var filtered_bmp = new System.Drawing.Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             switch(selectedFilter) {
-                // Median filter
-                case 0:
-
+                case FilterName.Median:
+                    var filtered_median = MedianFilter(img, 3);
+                    filtered_median.SaveToBitmap(filtered_bmp);
+                    this.bmp = filtered_bmp;
+                    this.img = filtered_median;
+                    pictureBox1.Image = bmp;
+                    break;
+                case FilterName.Average:
+                    var filtered_avg = Convolution(img, average);
+                    filtered_avg.SaveToBitmap(filtered_bmp);
+                    this.bmp = filtered_bmp;
+                    this.img = filtered_avg;
+                    pictureBox1.Image = bmp;
+                    break;
+               // Gaussian filter
+                case FilterName.Gauss:
+                    var filtered_gauss = Convolution(img, gauss);
+                    filtered_gauss.SaveToBitmap(filtered_bmp);
+                    this.bmp = filtered_bmp;
+                    this.img = filtered_gauss;
+                    pictureBox1.Image = bmp;
                     break;
             }
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e) {
-            selectedFilter = comboBox1.SelectedIndex;
+            selectedFilter = (FilterName) comboBox1.SelectedIndex;
         }
     }
 
