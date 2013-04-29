@@ -105,8 +105,19 @@ namespace ImageProcessing {
             bitmap.UnlockBits(bmd);
         }
         #endregion
-
+        /// <summary>
+        /// Returns the size x size neighborhood (central pixel included) of the pixel located at (x, y)
+        /// in the image c. Returns the color in channel (0: Red, 1: Green, 2: Blue).
+        /// </summary>
+        /// <param name="c"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="size"></param>
+        /// <param name="channel"></param>
+        /// <returns></returns>
         public static byte[] GetNeighborhood(ColorImage c, int x, int y, int size, int channel) {
+            if(channel < 0 || channel > 2)            
+                throw new ArgumentException("Illegal channel");
             byte[] ret = new byte[size * size];
             int count = 0;
             int low = -size / 2;
@@ -123,8 +134,6 @@ namespace ImageProcessing {
                         case 2:
                             ret[count++] = c.Blue[x + i, y + j];
                             break;
-                        default:
-                            throw new ArgumentException("Illegal channel");
                     }
                 }
             }

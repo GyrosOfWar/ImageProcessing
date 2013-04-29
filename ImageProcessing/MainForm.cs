@@ -7,16 +7,22 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.VisualStudio.Profiler;
 
 namespace ImageProcessing {
     public partial class MainForm: Form {
         private ColorImage img;
         private Stopwatch stpw = new Stopwatch();
+        private System.Drawing.Bitmap bmp;
+        private int height, width;
+        private int selectedFilter;
         public MainForm() {
             InitializeComponent();
-            img = new ColorImage(bmp.Height, bmp.Width);
-            img.LoadFromBitmap(bmp);
+            height = pictureBox1.Height;
+            width = pictureBox1.Width;
+            img = new ColorImage(height, width);
+            bmp = new System.Drawing.Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            comboBox1.SelectedIndex = 0;
+            selectedFilter = comboBox1.SelectedIndex;
         }
 
         public ColorImage MedianFilter(ColorImage img, int windowSize) {
@@ -36,7 +42,6 @@ namespace ImageProcessing {
             }
             return ret;
         }
-
         public ColorImage MedianFilterFast(ColorImage img, int windowSize) {
             ColorImage ret = new ColorImage(img.Height, img.Width);
             int[] hist = new int[256];
@@ -94,6 +99,28 @@ namespace ImageProcessing {
             //var f = new Filter(kernel, 1.0 / 9.0, 0);
             //var img_filtered = Convolution(img, f);
             //img_filtered.SaveToBitmap(filtered_bmp);
+        }
+
+        private void openButton_Click(object sender, EventArgs e) {
+            if(openFileDialog1.ShowDialog() == DialogResult.OK) {
+                bmp = new System.Drawing.Bitmap(openFileDialog1.FileName);
+                pictureBox1.Image = bmp;
+                img.LoadFromBitmap(bmp);
+            }
+        }
+
+        private void applyFilterButton_Click(object sender, EventArgs e) {
+            var filtered = new System.Drawing.Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            switch(selectedFilter) {
+                // Median filter
+                case 0:
+
+                    break;
+            }
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e) {
+            selectedFilter = comboBox1.SelectedIndex;
         }
     }
 
