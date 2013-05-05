@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace ImageProcessing {
     public class Image {
@@ -21,6 +22,9 @@ namespace ImageProcessing {
             for(int i = 0; i < height; i++) {
                 vals[i] = new byte[width];
             }
+        }
+        public override string ToString() {
+            return "Height: " + Height + ", Width: " + Width;
         }
     }
 
@@ -46,6 +50,9 @@ namespace ImageProcessing {
             this.Blue = new Image(h, w);
             this.Height = h;
             this.Width = w;
+        }
+        public override string ToString() {
+            return Red.ToString();
         }
         // The next three methods were
         // taken from http://www.sergejusz.com/engineering_tips/median_filter.htm
@@ -116,7 +123,7 @@ namespace ImageProcessing {
         /// <param name="channel"></param>
         /// <returns></returns>
         public static byte[] GetNeighborhood(ColorImage c, int x, int y, int size, int channel) {
-            if(channel < 0 || channel > 2)            
+            if(channel < 0 || channel > 2)
                 throw new ArgumentException("Illegal channel");
             byte[] ret = new byte[size * size];
             int count = 0;
@@ -138,6 +145,18 @@ namespace ImageProcessing {
                 }
             }
             return ret;
+        }
+
+        public Image ToGrayscaleImage() {
+            Image gray = new Image(Height, Width);
+            //0.21 R + 0.71 G + 0.07 B
+            for(int i = 0; i < Height; i++) {
+                for(int j = 0; j < Width; j++) {
+                    double result = 0.21 * (double) Red[i, j] + 0.71 * (double) Green[i, j] + 0.07 * (double) Blue[i, j];
+                    gray[i, j] = (byte) result;
+                }
+            }
+            return gray;
         }
     }
 }

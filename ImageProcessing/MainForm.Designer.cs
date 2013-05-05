@@ -72,6 +72,7 @@
             "Median filter",
             "Average filter",
             "Gaussian blur",
+            "Sobel filter",
             "Custom"});
             this.comboBox1.Location = new System.Drawing.Point(519, 520);
             this.comboBox1.Name = "comboBox1";

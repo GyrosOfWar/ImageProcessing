@@ -10,13 +10,13 @@ using System.Windows.Forms;
 
 namespace ImageProcessing {
     public partial class MainForm: Form {
-        public enum FilterName { Median = 0, Average, Gauss, Custom };
+        public enum FilterName { Median = 0, Average, Gauss, Sobel, Custom };
         private ColorImage img;
         private Stopwatch stpw = new Stopwatch();
         private System.Drawing.Bitmap bmp;
         private int height, width;
         private FilterName selectedFilter;
-        private readonly Filter average, gauss;
+        private Filter average, gauss, sobel1, sobel2;
         public MainForm() {
             InitializeComponent();
             height = pictureBox1.Height;
@@ -25,6 +25,10 @@ namespace ImageProcessing {
             bmp = new System.Drawing.Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             comboBox1.SelectedIndex = 0;
             selectedFilter = (FilterName) comboBox1.SelectedIndex;
+            initFilters();
+        }
+
+        private void initFilters() {
             int[][] kernel = new int[3][];
             kernel[0] = new int[] { 1, 1, 1 };
             kernel[1] = new int[] { 1, 1, 1 };
@@ -36,6 +40,18 @@ namespace ImageProcessing {
             kernel2[1] = new int[] { 2, 4, 2 };
             kernel2[2] = new int[] { 1, 2, 1 };
             gauss = new Filter(kernel2, 1.0 / 16.0, 0);
+
+            int[][] kernel3 = new int[3][];
+            kernel3[0] = new int[] { 1, 2, 1 };
+            kernel3[1] = new int[] { 0, 0, 0 };
+            kernel3[2] = new int[] { -1, -2, -1 };
+            sobel1 = new Filter(kernel3, 1.0, 128);
+
+            int[][] kernel4 = new int[3][];
+            kernel4[0] = new int[] { 1, 0, -1 };
+            kernel4[1] = new int[] { 2, 0, -2 };
+            kernel4[2] = new int[] { 1, 0, -1 };
+            sobel2 = new Filter(kernel4, 1.0, 128);
         }
 
         public ColorImage MedianFilter(ColorImage img, int windowSize) {
@@ -134,7 +150,19 @@ namespace ImageProcessing {
                     this.img = filtered_gauss;
                     pictureBox1.Image = bmp;
                     break;
+                case FilterName.Sobel:
+                    SobelFiter(img);
+                    break; 
             }
+        }
+
+        private void SobelFiter(ColorImage img) {
+            var filtered_sobel = Convolution(img, sobel1).ToGrayscaleImage();
+            ColorImage tmp = new ColorImage(filtered_sobel, filtered_sobel, filtered_sobel);
+            tmp.SaveToBitmap(filtered_bmp);
+            this.bmp = filtered_bmp;
+            this.img = tmp;
+            pictureBox1.Image = bmp;
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e) {
